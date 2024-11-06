@@ -35,7 +35,16 @@ function connect() {
         // Enviar solicitud 'initialize'
         sendDAPRequest("initialize", { adapterID: "dlv" }, function(response) {
             console.log("Respuesta a 'initialize':", response);
-            // No enviar 'launch' aquí
+
+            // Enviar solicitud 'launch' con 'stopOnEntry: true'
+            sendDAPRequest("launch", { program: programPath, stopOnEntry: true }, function(response) {
+                console.log("Respuesta a 'launch':", response);
+
+                // Enviar solicitud 'pause' inmediatamente después de 'launch' (opcional si usamos 'stopOnEntry: true')
+                // sendDAPRequest("pause", {}, function(response) {
+                //     console.log("Respuesta a 'pause':", response);
+                // });
+            });
         });
 
         // Refrescar la lista de archivos al conectar
@@ -63,17 +72,23 @@ function connect() {
                 console.log("Evento 'initialized' recibido");
 
                 // Establecer breakpoints pendientes
-                if (pendingBreakpoints.length > 0) {
-                    pendingBreakpoints.forEach(args => {
-                        sendDAPRequest("setBreakpoints", args, function(response) {
-                            console.log("Respuesta a 'setBreakpoints' (pendiente):", response);
-                        });
+                for (let file in currentBreakpoints) {
+                    let args = {
+                        source: {
+                            path: file
+                        },
+                        breakpoints: currentBreakpoints[file].map(line => ({ line: line }))
+                    };
+                    sendDAPRequest("setBreakpoints", args, function(response) {
+                        console.log("Respuesta a 'setBreakpoints':", response);
                     });
-                    pendingBreakpoints = [];
                 }
 
-                // Puedes establecer breakpoints aquí si lo deseas
-                // No enviamos 'configurationDone' aún
+                // Enviar 'configurationDone' después de establecer los breakpoints
+                sendDAPRequest("configurationDone", {}, function(response) {
+                    console.log("Respuesta a 'configurationDone':", response);
+                    programLaunched = true;
+                });
             } else if (data.event === "stopped") {
                 let threadId = data.body.threadId;
                 currentThreadId = threadId; // Guardamos el threadId actual
@@ -161,14 +176,14 @@ function setBreakpoint() {
         breakpoints: currentBreakpoints[filePath].map(line => ({ line: line }))
     };
 
-    if (programLaunched || pendingBreakpoints.length === 0) {
-        // Si el programa ya fue lanzado o no hay breakpoints pendientes, enviar inmediatamente
+    if (programLaunched) {
+        // Si el programa ya fue lanzado, enviar inmediatamente
         sendDAPRequest("setBreakpoints", args, function(response) {
             console.log("Respuesta a 'setBreakpoints':", response);
         });
     } else {
-        // Almacenar el breakpoint pendiente para enviarlo después de 'initialized'
-        pendingBreakpoints.push(args);
+        // Los breakpoints se enviarán después de 'initialized'
+        console.log("Breakpoint establecido, se enviará al depurador después de 'initialized'");
     }
 }
 
@@ -183,15 +198,17 @@ function removeBreakpoint(filePath, line) {
         updateBreakpointsList();
 
         // Actualizar los breakpoints en el depurador
-        let args = {
-            source: {
-                path: filePath
-            },
-            breakpoints: currentBreakpoints[filePath] ? currentBreakpoints[filePath].map(line => ({ line: line })) : []
-        };
-        sendDAPRequest("setBreakpoints", args, function(response) {
-            console.log("Respuesta a 'setBreakpoints' tras eliminar breakpoint:", response);
-        });
+        if (programLaunched) {
+            let args = {
+                source: {
+                    path: filePath
+                },
+                breakpoints: currentBreakpoints[filePath].map(line => ({ line: line }))
+            };
+            sendDAPRequest("setBreakpoints", args, function(response) {
+                console.log("Respuesta a 'setBreakpoints' tras eliminar breakpoint:", response);
+            });
+        }
     }
 }
 
@@ -219,28 +236,14 @@ function updateBreakpointsList() {
 }
 
 function continueExecution() {
-    if (!programLaunched) {
-        // Enviar solicitud 'launch'
-        sendDAPRequest("launch", { program: programPath }, function(response) {
-            console.log("Respuesta a 'launch':", response);
-
-            // Enviar 'configurationDone' después de 'launch'
-            sendDAPRequest("configurationDone", {}, function(response) {
-                console.log("Respuesta a 'configurationDone':", response);
-
-                // Ahora podemos enviar 'continue'
-                sendDAPRequest("continue", {}, function(response) {
-                    console.log("Respuesta a 'continue':", response);
-                });
-            });
-        });
-        programLaunched = true;
-    } else {
+    if (programLaunched) {
         sendDAPRequest("continue", {}, function(response) {
             console.log("Respuesta a 'continue':", response);
         });
+        currentThreadId = null; // Reseteamos el threadId actual al continuar
+    } else {
+        console.error("El programa aún no ha sido lanzado o no está listo para continuar.");
     }
-    currentThreadId = null; // Reseteamos el threadId actual al continuar
 }
 
 function pause() {
