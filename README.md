@@ -37,8 +37,8 @@ To get this application running on your machine, follow these instructions.
 1. **Clone the Repository**
 
     ```bash
-    git clone https://github.com/yourusername/dap-debugger-client.git
-    cd dap-debugger-client
+    git clone https://github.com/arturoeanton/gofuji.git
+    cd gofuji
     ```
 
 2. **Install Go Dependencies**
