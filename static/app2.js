@@ -363,14 +363,23 @@ function getRunningCode(source, lineNumber) {
                 let lines = content.split('\n');
                 runningCodeElement.innerHTML = '';
 
+                let highlightedLineElem = null; // Variable para guardar el elemento de la línea resaltada
+
                 lines.forEach((line, index) => {
                     let lineElem = document.createElement('div');
                     if (index + 1 === lineNumber) {
                         lineElem.classList.add('highlight');
+                        highlightedLineElem = lineElem; // Guardamos el elemento de la línea resaltada
                     }
                     lineElem.textContent = `${index + 1}: ${line}`;
                     runningCodeElement.appendChild(lineElem);
                 });
+
+                // Desplazamos el contenedor para mostrar la línea resaltada
+                if (highlightedLineElem) {
+                    highlightedLineElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+
             } else {
                 console.error("Error al obtener el código en ejecución:", response.message);
                 if (source.path) {
@@ -381,14 +390,23 @@ function getRunningCode(source, lineNumber) {
                             let lines = content.split('\n');
                             runningCodeElement.innerHTML = '';
 
+                            let highlightedLineElem = null; // Variable para guardar el elemento de la línea resaltada
+
                             lines.forEach((line, index) => {
                                 let lineElem = document.createElement('div');
                                 if (index + 1 === lineNumber) {
                                     lineElem.classList.add('highlight');
+                                    highlightedLineElem = lineElem; // Guardamos el elemento de la línea resaltada
                                 }
                                 lineElem.textContent = `${index + 1}: ${line}`;
                                 runningCodeElement.appendChild(lineElem);
                             });
+
+                            // Desplazamos el contenedor para mostrar la línea resaltada
+                            if (highlightedLineElem) {
+                                highlightedLineElem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+
                         })
                         .catch(err => console.error("Error al obtener el código desde el servidor:", err));
                 }
