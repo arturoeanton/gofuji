@@ -18,9 +18,9 @@ This project aims to give developers a streamlined debugging experience through 
 ## Demo
 
 <!-- Include a screenshot or GIF demonstrating the UI here -->
-![DAP Debugger Client Demo](https://raw.githubusercontent.com/arturoeanton/gofuji/refs/heads/main/demo.png?token=GHSAT0AAAAAAC2CX5Y3KN4QWOOWHQUWYSEWZZNEPRQ)
-![Breakpoint Demo](https://raw.githubusercontent.com/arturoeanton/gofuji/refs/heads/main/demo1.png?token=GHSAT0AAAAAAC2CX5Y23BUTEYBT5K7SYC4OZZNENJA)
-![Debugger Demo](https://raw.githubusercontent.com/arturoeanton/gofuji/refs/heads/main/demo2.png?token=GHSAT0AAAAAAC2CX5Y3JSNHDNR6LOZCNDJ4ZZNENKA)
+![DAP Debugger Client Demo](https://github.com/arturoeanton/gofuji/blob/main/demo.png?raw=true)
+![Breakpoint Demo](https://github.com/arturoeanton/gofuji/blob/main/demo1.png?raw=true)
+![Debugger Demo](https://github.com/arturoeanton/gofuji/blob/main/demo2.png?raw=true)
 ## Getting Started
 
 To get this application running on your machine, follow these instructions.
