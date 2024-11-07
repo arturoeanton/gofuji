@@ -1,8 +1,4 @@
-# gofujiHere's a well-structured **README.md** for your Go-based DAP Debugger Client project. This document aims to explain everything thoroughly and make the project as appealing as possible.
-
----
-
-# DAP Debugger Client with Go and Fiber
+# GoFuji DAP Debugger Client with Go and Fiber
 
 Welcome to the **DAP Debugger Client** project! This is a web-based application for debugging Go applications using the Debug Adapter Protocol (DAP) and Delve. Built with the **Fiber** web framework and using **WebSockets**, it provides an interactive, user-friendly GUI to help developers debug their applications with ease.
 
@@ -22,7 +18,7 @@ This project aims to give developers a streamlined debugging experience through 
 ## Demo
 
 <!-- Include a screenshot or GIF demonstrating the UI here -->
-![DAP Debugger Client Demo](demo.gif)
+![DAP Debugger Client Demo](https://raw.githubusercontent.com/arturoeanton/gofuji/refs/heads/main/demo.png?token=GHSAT0AAAAAAC2CX5Y3SLMR34XC2QTJUMOOZZNEI3Q)
 
 ## Getting Started
 
