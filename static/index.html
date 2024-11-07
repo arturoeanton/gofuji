@@ -2,144 +2,295 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <title>Depurador DAP</title>
-    <!-- Bootstrap CSS desde CDN -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    <!-- Agregar iconos de FontAwesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" />
+    <title>DAP Debugger Client - Mejorado</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css">
+    <!-- Font Awesome para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/css/all.min.css">
+    <!-- Estilos personalizados -->
     <style>
-        #sourceCode div, #runningCode div {
-            white-space: pre;
-            font-family: monospace;
+        body {
+            padding-top: 20px;
+            padding-right: 80px;
+            padding-left: 80px;
         }
-        #sourceCode {
-            height: 400px;
-            overflow-y: scroll;
-        }
-        #runningCode {
-            height: 400px;
-            overflow-y: scroll;
-        }
-        /* Estilos para la lista de breakpoints */
-        #breakpointsList {
-            max-height: 200px;
+         #sourceCode {
+            max-height: 400px;
             overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+        }
+        #runningCode, #variables, #consoleOutput, #breakpointTimes {
+            max-height: 400px;
+            overflow-y: auto;
+            background-color: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+        }
+        #consoleOutput {
+            background-color: #212529;
+            color: #f8f9fa;
+        }
+        .highlight {
+            background-color: #ffffcc;
+        }
+        .section-title {
+            margin-top: 20px;
+            margin-bottom: 10px;
+        }
+        .input-group-text {
+            width: 150px;
+        }
+        .card-header {
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .btn-toolbar .btn-group .btn {
+            min-width: 40px;
+        }
+        .input-group .form-control {
+            width: auto;
+        }
+        /* Estilos para el modal */
+        .modal-lg {
+            max-width: 90%;
+        }
+        /* Estilos para menús flotantes */
+        #executionControl {
+            position: fixed;
+            top: 100px;
+            left: 20px;
+            width: 60px;
+            z-index: 1000;
+            cursor: move;
+        }
+        #runningCode, #sourceCode {
+            font-family: "Courier New", Courier, monospace;
+            white-space: pre;
+            tab-size: 4; /* Ajusta el ancho de los tabs a 4 espacios */
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <!-- Eliminamos el título principal -->
-        <!-- <h1 class="mt-4">Cliente DAP con Fiber y Go</h1> -->
+<!-- Botón para mostrar el Gestor de Breakpoints -->
 
-        <!-- Formulario de conexión -->
-        <div class="card mt-4">
-            <div class="card-header">Conectar al servidor DAP</div>
-            <div class="card-body">
-                <div class="form-row">
-                    <div class="col">
-                        <input type="text" id="address" class="form-control" placeholder="Dirección" value="127.0.0.1">
-                    </div>
-                    <div class="col">
-                        <input type="text" id="port" class="form-control" placeholder="Puerto" value="12345">
-                    </div>
-                    <div class="col">
-                        <input type="text" id="programPath" class="form-control" placeholder="Ruta del programa" value="/Users/arturoeliasanton/tmp/prueba1">
-                    </div>
-                    <div class="col">
-                        <button class="btn btn-primary" onclick="connect()" id="connectButton">Conectar</button>
-                        <button class="btn btn-danger" onclick="disconnect()" id="disconnectButton" disabled>Desconectar</button>
-                    </div>
+<!-- Control de Ejecución Flotante -->
+<div id="executionControl">
+    <div class="btn-group-vertical" role="group">
+        <button class="btn btn-success" onclick="continueExecution()" title="Continuar">
+            <i class="fas fa-play"></i>
+        </button>
+        <button class="btn btn-warning" onclick="pause()" title="Pausar">
+            <i class="fas fa-pause"></i>
+        </button>
+        <button class="btn btn-secondary" onclick="stepIn()" title="Step In">
+            <i class="fas fa-arrow-down"></i>
+        </button>
+        <button class="btn btn-secondary" onclick="stepOver()" title="Step Over">
+            <i class="fas fa-arrow-right"></i>
+        </button>
+        <button class="btn btn-secondary" onclick="stepOut()" title="Step Out">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
+</div>
+<div class="container-fluid" id="mainContent">
+    <!-- Sección de conexión -->
+    <div class="card mb-3">
+        <div class="card-header">
+            Conexión
+        </div>
+        <div class="card-body">
+            <form class="form-row align-items-end">
+                <div class="form-group col-md-3">
+                    <label for="address">Dirección:</label>
+                    <input type="text" class="form-control" id="address" placeholder="127.0.0.1" value="127.0.0.1">
+                </div>
+                <div class="form-group col-md-2">
+                    <label for="port">Puerto:</label>
+                    <input type="text" class="form-control" id="port" placeholder="12345" value="12345">
+                </div>
+                <div class="form-group col-md-5">
+                    <label for="programPath">Ruta del Programa:</label>
+                    <input type="text" class="form-control" id="programPath" placeholder="/ruta/a/tu/programa">
+                </div>
+                <div class="form-group col-md-2 text-right">
+                    <button id="connectButton" type="button" class="btn btn-primary" onclick="connect()">Conectar</button>
+                    <button id="disconnectButton" type="button" class="btn btn-danger" onclick="openBreakpointManager()" disabled>Breakpoint</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- Sección de código en ejecución -->
+    <h5 class="section-title">Código en Ejecución:</h5>
+    <div id="runningCode" class="mb-3"></div>
+    <!-- Sección de variables -->
+    <div class="card mb-3">
+        <div class="card-header">
+            Variables
+        </div>
+        <div class="card-body">
+            <div id="variables"></div>
+        </div>
+    </div>
+    <!-- Sección de consola -->
+    <div class="card mb-3">
+        <div class="card-header">
+            Consola
+            <button class="btn btn-sm btn-outline-secondary float-right" onclick="clearConsole()">Limpiar</button>
+        </div>
+        <div class="card-body">
+            <div id="consoleOutput" class="mb-2"></div>
+            <div class="input-group">
+                <input type="text" id="consoleInput" class="form-control" placeholder="Escribe código para ejecutar">
+                <div class="input-group-append">
+                    <button class="btn btn-outline-secondary" onclick="executeInConsole()">Ejecutar</button>
                 </div>
             </div>
         </div>
-
-        <!-- Panel de control -->
-        <div class="card mt-4">
-            <div class="card-header">Controles de Depuración</div>
-            <div class="card-body">
-                <div class="form-row align-items-center">
-                    <div class="col-auto">
-                        <!-- Select para rutas de archivos -->
-                        <select id="filePath" class="form-control" onchange="loadSourceCode()">
-                            <option value="">Selecciona un archivo</option>
-                        </select>
-                    </div>
-                    <div class="col-auto">
-                        <!-- Botón de refrescar archivos -->
-                        <button class="btn btn-secondary" onclick="refreshFiles()" title="Refrescar Archivos">
+    </div>
+    <!-- Sección de tiempos entre breakpoints -->
+    <div class="card mb-3">
+        <div class="card-header">
+            Tiempos entre Breakpoints
+        </div>
+        <div class="card-body">
+            <div id="breakpointTimes"></div>
+        </div>
+    </div>
+</div>
+<!-- Modal para el Gestor de Breakpoints y Visor de Código Fuente -->
+<div class="modal fade" id="breakpointModal" tabindex="-1" role="dialog" aria-labelledby="breakpointModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 id="breakpointModalLabel" class="modal-title">Gestión de Breakpoints y Código Fuente</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- Formulario para establecer breakpoints -->
+         
+        <form class="form-row align-items-end mb-3">
+            
+            <div class="form-group col-md-12">
+                <label for="filePath">Archivo:</label>
+                <div class="input-group">
+                    <select class="form-control" id="filePath" onchange="loadSourceCode()">
+                        <option value="">Selecciona un archivo</option>
+                    </select>
+                    <div class="input-group-append">
+                        <button class="btn btn-outline-secondary" type="button" onclick="refreshFiles()" title="Refrescar archivos">
                             <i class="fas fa-sync-alt"></i>
                         </button>
                     </div>
-                    <div class="col-auto">
-                        <input type="number" id="lineNumber" class="form-control" placeholder="Número de línea">
-                    </div>
-                    <div class="col-auto">
-                        <button class="btn btn-secondary" onclick="setBreakpoint()">Establecer Breakpoint</button>
-                    </div>
-                    <!-- Botones de control de depuración con iconos -->
-                    <div class="col-auto">
-                        <button class="btn btn-success" onclick="continueExecution()" title="Continuar">
-                            <i class="fas fa-play"></i>
-                        </button>
-                        <button class="btn btn-warning" onclick="pause()" title="Pausar">
-                            <i class="fas fa-pause"></i>
-                        </button>
-                        <button class="btn btn-info" onclick="stepIn()" title="Step In">
-                            <i class="fas fa-arrow-down"></i>
-                        </button>
-                        <button class="btn btn-info" onclick="stepOver()" title="Step Over">
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                        <button class="btn btn-info" onclick="stepOut()" title="Step Out">
-                            <i class="fas fa-arrow-up"></i>
-                        </button>
-                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- Lista de Breakpoints -->
-        <div class="card mt-4">
-            <div class="card-header">Breakpoints Actuales</div>
-            <div class="card-body">
-                <ul id="breakpointsList" class="list-group">
-                    <!-- Lista de breakpoints -->
-                </ul>
+            <div class="form-group col-md-6">
+                <label for="breakpointType">Tipo de Breakpoint:</label>
+                <select class="form-control" id="breakpointType" onchange="toggleBreakpointInput()">
+                    <option value="line">Número de Línea</option>
+                    <option value="function">Nombre de Función</option>
+                </select>
             </div>
-        </div>
+            <div class="form-group col-md-6" id="lineNumberGroup">
+                <label for="lineNumber">Línea:</label>
+                <input type="number" class="form-control" id="lineNumber" placeholder="Número de línea">
+            </div>
+            <div class="form-group col-md-4 d-none" id="functionNameGroup">
+                <label for="functionName">Función:</label>
+                <select class="form-control" id="functionName"></select>
+            </div>
+            <div class="form-group col-md-9">
+                <button class="btn btn-primary form-control" type="button" onclick="setBreakpoint()">Establecer Breakpoint</button>
 
-        <!-- Mostrar código fuente y código en ejecución -->
-        <div class="row mt-4">
-            <div class="col-md-6">
-                <h4>Código Fuente</h4>
-                <pre id="sourceCode" style="background-color: #f8f9fa; padding: 10px; border: 1px solid #ced4da;"></pre>
             </div>
-            <div class="col-md-6">
-                <h4>Código en Ejecución</h4>
-                <pre id="runningCode" style="background-color: #f8f9fa; padding: 10px; border: 1px solid #ced4da;"></pre>
-            </div>
-        </div>
+            <div class="form-group col-md-3">
+                <button class="btn btn-danger btn-block form-control" type="button" onclick="clearAllBreakpoints()">Eliminar Todos los Breakpoints</button>
 
-        <!-- Mostrar variables -->
-        <div class="row mt-4">
-            <div class="col-md-12">
-                <h4>Variables</h4>
-                <pre id="variables" style="background-color: #f8f9fa; padding: 10px; border: 1px solid #ced4da;"></pre>
             </div>
-        </div>
-
-        <!-- Output -->
-        <div class="mt-4">
-            <h4>Output</h4>
-            <pre id="output" style="background-color: #f8f9fa; padding: 10px; border: 1px solid #ced4da; height: 200px; overflow-y: scroll;"></pre>
-        </div>
+        </form>
+        <!-- Lista de breakpoints -->
+        <h5 class="section-title">Breakpoints Actuales:</h5>
+        <ul id="breakpointsList" class="list-group mb-3"></ul>
+        <!-- Visor de Código Fuente -->
+        <h5 class="section-title">Código Fuente:</h5>
+        <div id="sourceCode" class="mb-3"></div>
+      </div>
     </div>
+  </div>
+</div>
+<!-- jQuery y Bootstrap JS -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<!-- Popper.js y Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.1/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"></script>
+<!-- Font Awesome JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.1/js/all.min.js"></script>
+<!-- App2.js -->
+<script src="/app2.js"></script>
+<!-- Script para manejar el modal y funciones adicionales -->
+<script>
 
-    <!-- jQuery y Bootstrap JS desde CDN -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <!-- FontAwesome para los iconos -->
-    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-    <script src="app.js"></script>
+    function clearConsole() {
+        document.getElementById('consoleOutput').innerHTML = '';
+    }
+
+    function openBreakpointManager() {
+        $('#breakpointModal').modal('show');
+    }
+    function toggleBreakpointInput() {
+        const type = document.getElementById('breakpointType').value;
+        if (type === 'line') {
+            document.getElementById('lineNumberGroup').classList.remove('d-none');
+            document.getElementById('functionNameGroup').classList.add('d-none');
+        } else {
+            getFunctionNames();
+            document.getElementById('lineNumberGroup').classList.add('d-none');
+            document.getElementById('functionNameGroup').classList.remove('d-none');
+        }
+    }
+    // Hacer el Execution Control arrastrable
+    function makeElementDraggable(elmnt) {
+        var pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+        elmnt.onmousedown = dragMouseDown;
+
+        function dragMouseDown(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // obtener la posición del cursor al inicio
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            document.onmouseup = closeDragElement;
+            // llamar a la función cada vez que el cursor se mueve
+            document.onmousemove = elementDrag;
+        }
+
+        function elementDrag(e) {
+            e = e || window.event;
+            e.preventDefault();
+            // calcular la nueva posición del cursor
+            pos1 = pos3 - e.clientX;
+            pos2 = pos4 - e.clientY;
+            pos3 = e.clientX;
+            pos4 = e.clientY;
+            // establecer la nueva posición del elemento
+            elmnt.style.top = (elmnt.offsetTop - pos2) + "px";
+            elmnt.style.left = (elmnt.offsetLeft - pos1) + "px";
+        }
+
+        function closeDragElement() {
+            // detener el movimiento cuando se suelta el botón del mouse
+            document.onmouseup = null;
+            document.onmousemove = null;
+        }
+    }
+
+    // Inicializar la función de arrastre en el elemento executionControl
+    makeElementDraggable(document.getElementById("executionControl"));
+</script>
 </body>
 </html>
