@@ -12,6 +12,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/websocket/v2"
+
+	"go/ast"
+	"go/parser"
+	"go/token"
 )
 
 type DAPClient struct {
@@ -36,6 +40,8 @@ func main() {
 		}
 		return c.SendString(string(data))
 	})
+
+	app.Get("/functions", functionsHandler)
 
 	// Maneja la conexión WebSocket
 	app.Get("/ws", websocket.New(func(c *websocket.Conn) {
@@ -206,4 +212,58 @@ func (client *DAPClient) listenDAPResponses(responses chan<- string, c *websocke
 		// Envía la respuesta al cliente WebSocket
 		c.WriteMessage(websocket.TextMessage, content)
 	}
+}
+
+// Estructura para representar una función
+type FunctionInfo struct {
+	Name string `json:"name"`
+	Line int    `json:"line"`
+}
+
+// Función para obtener las funciones y sus líneas de código de un archivo Go
+func getFunctions(filePath string) ([]FunctionInfo, error) {
+	// Ruta absoluta del archivo
+	absPath, err := filepath.Abs(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	// Crear un nuevo conjunto de archivos (file set)
+	fset := token.NewFileSet()
+
+	// Analizar el archivo Go
+	node, err := parser.ParseFile(fset, absPath, nil, 0)
+	if err != nil {
+		return nil, err
+	}
+
+	var functions []FunctionInfo
+
+	// Recorrer los nodos del archivo
+	for _, decl := range node.Decls {
+		if funcDecl, ok := decl.(*ast.FuncDecl); ok {
+			// Obtener la posición de la función
+			pos := fset.Position(funcDecl.Pos())
+			functions = append(functions, FunctionInfo{
+				Name: funcDecl.Name.Name,
+				Line: pos.Line,
+			})
+		}
+	}
+
+	return functions, nil
+}
+
+func functionsHandler(c *fiber.Ctx) error {
+	filePath := c.Query("filePath")
+	if filePath == "" {
+		return c.Status(fiber.StatusBadRequest).SendString("El parámetro 'filePath' es requerido")
+	}
+
+	functions, err := getFunctions(filePath)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+	}
+
+	return c.JSON(functions)
 }
